@@ -1,0 +1,85 @@
+--[[ 
+    Author: Zv_zvy
+    Date: 12/23/2021
+    Note: All Rights Reserved
+--]]
+
+--// Services
+local playerService = game:GetService("Players")
+local replicatedStorage = game:GetService("ReplicatedStorage")
+local serverStorage = game:GetService("ServerStorage")
+local marketplaceService = game:GetService("MarketplaceService")
+local datastoreService = game:GetService("DataStoreService")
+
+--// Modules
+local SpringAnim = require(replicatedStorage.Client:FindFirstChild("SpringAnim"))
+local PetFramework = require(script:FindFirstChild("PetFramework"))
+
+--// Tables
+local petsInfo = {
+    ['Starter Pet'] = {
+        ['Name'] = "Noobie Bob",
+        ['Rarity'] = "Common",
+        ['Perk'] = function(Player)
+            --Perk Here
+        end
+    },
+
+    ['Jeffrey Star'] = {
+        ['Name'] = "Hungry Jeff",
+        ['Rarity'] = "Uncommon",
+        ['Perk'] = function(Player)
+            --Perk Here
+        end
+    },
+}
+
+local dataStores = {
+    ['Pets'] = datastoreService:GetDataStore("IronPets")
+}
+
+local currentPets = {}
+
+--// Variables
+local petsFolder = serverStorage:FindFirstChild("Pets")
+
+--// Values
+local currentlyEquiped = 0
+
+--// Remote Functions
+replicatedStorage:FindFirstChild("Functions"):FindFirstChild("getPets").OnServerInvoke = function(Player)
+    task.spawn(function()
+        local succ, result = pcall(function()
+            return petsInfo
+        end)
+    end)
+end
+
+--// Remote Events
+replicatedStorage:FindFirstChild("Remotes"):FindFirstChild("loadPets").OnServerEvent:Connect(function(Player)
+    task.spawn(function()
+        local succ, result = pcall(function()
+            local retrievedData = dataStores['Pets']:GetAsync(Player.UserId, currentPets) or nil
+            if retrievedData ~= nil then
+                if table.find(petsInfo, retrievedData[1]) then
+                    if currentlyEquiped < 2 then
+                        if retrievedData[2] == true then
+                            if petsFolder:FindFirstChild(tostring(retrievedData[1])) then
+                                local petClone = petsFolder:FindFirstChild(tostring(retrievedData[1])):Clone()
+                                PetFramework.loadPetFromLibrary(
+                                    retrievedData,
+                                    petClone,
+                                    Player
+                                )
+                                petsInfo[retrievedData[1]]['Perk'](Player)
+                            end
+                        end
+                    end
+                end
+            end
+        end)
+        if result and not succ then
+            warn(tostring(script.Name)..' an error has occurred while loading pets: '..tostring(result))
+        end
+    end)
+end)
